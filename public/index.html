@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1a1917">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ShopERP - Store Management</title>
+<link rel="manifest" href="manifest.json">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f5f4f0;--card:#fff;--border:#e2e0db;--text:#1a1917;--muted:#6b6963;
+  --accent:#1d9e75;--accent2:#185fa5;--danger:#e24b4a;--warn:#ba7517;
+  --sidebar:#1a1917;--sidebar-text:#f8f7f4;--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* ── LOADING ── */
+#loadScreen{position:fixed;inset:0;background:#1a1917;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999}
+#loadScreen h1{color:#fff;font-size:28px;font-weight:700;margin-bottom:8px}
+#loadScreen p{color:#888;font-size:14px}
+.spinner{width:32px;height:32px;border:3px solid #333;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── LOGIN ── */
+#loginPage{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg);display:none}
+.login-card{background:#fff;border:1px solid var(--border);border-radius:20px;padding:32px 24px;width:100%;max-width:380px}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo h1{font-size:26px;font-weight:700}
+.login-logo p{color:var(--muted);font-size:13px;margin-top:4px}
+.role-switch{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
+.role-btn{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;transition:.15s}
+.role-btn.active{background:var(--accent);color:#fff}
+
+/* ── APP SHELL ── */
+#app{display:none;flex:1;flex-direction:column;overflow:hidden}
+#app.shown{display:flex}
+
+/* ── TOP BAR (mobile) ── */
+.topbar{background:var(--sidebar);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;padding-top:max(12px,env(safe-area-inset-top))}
+.topbar-title{flex:1;font-size:16px;font-weight:600}
+.topbar-menu{width:36px;height:36px;border-radius:8px;display:flex;flex-direction:column;justify-content:center;gap:5px;padding:8px;cursor:pointer}
+.topbar-menu span{display:block;height:2px;background:#fff;border-radius:2px}
+.topbar-user{width:32px;height:32px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff}
+
+/* ── DRAWER SIDEBAR ── */
+.drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80}
+.drawer-overlay.open{display:block}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:260px;background:var(--sidebar);z-index:90;transform:translateX(-100%);transition:transform .25s ease;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+.drawer.open{transform:translateX(0)}
+.drawer-logo{padding:20px 16px 14px;border-bottom:1px solid #2a2a2a}
+.drawer-logo h2{color:#fff;font-size:18px;font-weight:700}
+.drawer-logo p{color:#666;font-size:11px;margin-top:2px}
+.drawer-nav{flex:1;padding:10px 8px;overflow-y:auto}
+.nav-section{font-size:10px;color:#555;padding:12px 8px 4px;letter-spacing:.08em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 10px;border-radius:8px;cursor:pointer;font-size:14px;color:#aaa;transition:.15s;margin-bottom:2px}
+.nav-item:hover,.nav-item:active{background:#2a2a2a;color:#fff}
+.nav-item.active{background:var(--accent);color:#fff}
+.nav-item svg{width:18px;height:18px;flex-shrink:0}
+.drawer-user{padding:14px;border-top:1px solid #2a2a2a;padding-bottom:max(14px,calc(var(--safe-bottom) + 14px))}
+.drawer-user-row{display:flex;align-items:center;gap:10px}
+.drawer-avatar{width:36px;height:36px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;padding-bottom:max(16px,calc(var(--safe-bottom) + 16px))}
+.page{display:none}
+.page.active{display:block}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:8px}
+.page-title{font-size:20px;font-weight:700}
+.page-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border-radius:10px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;white-space:nowrap;-webkit-appearance:none}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:active{background:#168a63}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-warn{background:var(--warn);color:#fff}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:active{background:#f0ede8}
+.btn-sm{padding:7px 12px;font-size:12px}
+.btn-block{width:100%;justify-content:center}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}
+.stat-label{font-size:11px;color:var(--muted);margin-bottom:5px}
+.stat-value{font-size:22px;font-weight:700}
+.stat-value.green{color:var(--accent)}
+.stat-value.blue{color:var(--accent2)}
+.stat-value.red{color:var(--danger)}
+.stat-value.amber{color:var(--warn)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* ── TABLE WRAPPER ── */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:480px}
+th{text-align:left;padding:10px 12px;font-size:10px;color:var(--muted);border-bottom:2px solid var(--border);text-transform:uppercase;letter-spacing:.06em;font-weight:600;white-space:nowrap;background:#fafaf8}
+td{padding:10px 12px;border-bottom:1px solid #f0ede8;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+
+/* ── MOBILE CARDS (list view) ── */
+.item-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px}
+.item-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.item-card-title{font-size:15px;font-weight:600}
+.item-card-body{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.item-card-field{font-size:12px}
+.item-card-field span{color:var(--muted);display:block;font-size:11px}
+.item-card-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-green{background:#eaf3de;color:#3b6d11}
+.badge-red{background:#fcebeb;color:#a32d2d}
+.badge-blue{background:#e6f1fb;color:#185fa5}
+.badge-amber{background:#faeeda;color:#854f0b}
+.badge-gray{background:#f1efe8;color:#444}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+@media(min-width:600px){.modal-overlay{align-items:center}}
+.modal{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:max(20px,calc(var(--safe-bottom) + 20px))}
+@media(min-width:600px){.modal{border-radius:20px;width:95%;max-width:500px;max-height:90vh}}
+.modal-handle{width:36px;height:4px;background:#e0ddd8;border-radius:2px;margin:0 auto 14px}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:16px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;background:#fff;color:var(--text);outline:none;-webkit-appearance:none;appearance:none}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-actions{display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.modal-actions .btn{flex:1;justify-content:center}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;background:#f0ede8;border-radius:10px;padding:3px;margin-bottom:14px}
+.tab{flex:1;text-align:center;padding:8px 4px;border-radius:8px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;transition:.15s}
+.tab.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* ── SEARCH ── */
+.search-wrap{position:relative;margin-bottom:14px}
+.search-wrap input{width:100%;padding:11px 14px 11px 38px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;outline:none}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+
+/* ── CASH COUNTER ── */
+.cash-counter{background:linear-gradient(135deg,#1a1917 0%,#2d2d2a 100%);border-radius:16px;padding:20px;color:#fff;margin-bottom:14px}
+.cash-counter h3{font-size:14px;font-weight:600;color:#aaa;margin-bottom:16px;text-transform:uppercase;letter-spacing:.06em}
+.cash-input-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cash-input-row label{font-size:13px;color:#bbb;width:80px;flex-shrink:0}
+.cash-input-row input{flex:1;background:#2a2a27;border:1px solid #3a3a37;border-radius:8px;padding:10px 12px;color:#fff;font-size:16px;outline:none}
+.cash-input-row input:focus{border-color:var(--accent)}
+.cash-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.cash-icon.online{background:#1d3a6e}
+.cash-icon.cash{background:#3a2a00}
+.cash-divider{border:none;border-top:1px solid #333;margin:14px 0}
+.cash-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.cash-total-label{font-size:13px;color:#aaa}
+.cash-total-val{font-size:16px;font-weight:700}
+.cash-total-val.green{color:#5dcaa5}
+.cash-total-val.red{color:#f09595}
+.cash-total-val.blue{color:#85b7eb}
+.cash-balance-row{background:#2a2a27;border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;margin-top:10px}
+.balance-label{font-size:12px;color:#888}
+.balance-val{font-size:22px;font-weight:800}
+.balance-val.surplus{color:#5dcaa5}
+.balance-val.shortage{color:#f09595}
+
+/* ── LOW STOCK ── */
+.low-stock-item{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0ede8}
+.low-stock-item:last-child{border-bottom:none}
+
+/* ── ATTENDANCE TOGGLE ── */
+.att-toggle{display:flex;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.att-toggle button{flex:1;padding:7px;font-size:12px;border:none;background:#fff;cursor:pointer;transition:.15s;font-weight:500}
+.att-toggle button.present{background:#eaf3de;color:#3b6d11}
+.att-toggle button.absent{background:#fcebeb;color:#a32d2d}
+
+/* ── FAB ── */
+.fab{position:fixed;bottom:max(20px,calc(var(--safe-bottom) + 20px));right:20px;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(29,158,117,.4);cursor:pointer;z-index:50;display:none}
+.fab.show{display:flex}
+
+/* ── CHART BARS ── */
+.mini-chart{display:flex;align-items:flex-end;gap:4px;height:80px;padding-top:4px}
+.mini-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:0}
+.mini-bar{width:100%;background:var(--accent);border-radius:3px 3px 0 0;min-height:3px;transition:height .4s}
+.mini-bar-label{font-size:9px;color:var(--muted)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:max(80px,calc(var(--safe-bottom) + 80px));left:50%;transform:translateX(-50%);background:#1a1917;color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state-icon{font-size:40px;margin-bottom:12px}
+.empty-state p{font-size:14px}
+
+/* ── SECTION HEADER ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.section-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+
+/* ── DESKTOP SIDEBAR (≥768px) ── */
+@media(min-width:768px){
+  body{flex-direction:row}
+  .topbar{display:none}
+  .drawer-overlay{display:none!important}
+  .drawer{position:relative;transform:none!important;width:220px;flex-shrink:0;padding-top:0}
+  .main{padding:24px}
+  .modal{border-radius:20px;align-self:center}
+  .fab.show{display:none}
+  .stat-grid{grid-template-columns:repeat(4,1fr)}
+  table{min-width:auto}
+}
+
+/* ── SYNC INDICATOR ── */
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#5dcaa5;flex-shrink:0}
+.sync-dot.offline{background:#f09595}
+</style>
+</head>
+<body>
+
+<div id="loadScreen">
+  <div class="spinner"></div>
+  <h1>ShopERP</h1>
+  <p>Connecting to database...</p>
+</div>
+
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>ShopERP</h1>
+      <p>Departmental Store Management</p>
+    </div>
+    <div class="role-switch">
+      <div class="role-btn active" id="roleAdminBtn" onclick="setLoginRole('admin')">Admin</div>
+      <div class="role-btn" id="roleEmpBtn" onclick="setLoginRole('employee')">Employee</div>
+    </div>
+    <div class="form-group"><label>Username</label><input id="loginUser" type="text" placeholder="Enter username" autocomplete="username"></div>
+    <div class="form-group"><label>Password</label><input id="loginPass" type="password" placeholder="Enter password" autocomplete="current-password"></div>
+    <div id="loginErr" style="color:var(--danger);font-size:13px;margin-bottom:10px;display:none;padding:8px;background:#fcebeb;border-radius:8px">Invalid username or password</div>
+    <button class="btn btn-primary btn-block" onclick="doLogin()">Sign In</button>
+    <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:14px">Admin: admin / admin123 &nbsp;|&nbsp; Staff: emp1 / emp123</p>
+  </div>
+</div>
+
+<div id="app">
+  <!-- DRAWER -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-logo">
+      <h2>ShopERP</h2>
+      <p id="drawerDate"></p>
+    </div>
+    <div class="drawer-nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="nav('dashboard')" id="nav-dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard
+      </div>
+      <div class="nav-item" onclick="nav('cashcount')" id="nav-cashcount">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h.01M18 12h.01M12 12a2 2 0 100-4 2 2 0 000 4z"/></svg>Cash Counter
+      </div>
+      <div class="nav-section admin-only">Management</div>
+      <div class="nav-item admin-only" onclick="nav('employees')" id="nav-employees">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="17" cy="9" r="3"/><path d="M21 21v-2a3 3 0 00-2-2.83"/></svg>Employees
+      </div>
+      <div class="nav-item" onclick="nav('inventory')" id="nav-inventory">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V6a2 2 0 00-2-2H5a2 2 0 00-2 2v2"/><rect x="1" y="8" width="22" height="14" rx="2"/><path d="M9 14h6"/></svg>Inventory
+      </div>
+      <div class="nav-section">Transactions</div>
+      <div class="nav-item" onclick="nav('sales')" id="nav-sales">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Sales
+      </div>
+      <div class="nav-item" onclick="nav('expenditure')" id="nav-expenditure">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>Expenditure
+      </div>
+      <div class="nav-section">HR</div>
+      <div class="nav-item" onclick="nav('attendance')" id="nav-attendance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Attendance
+      </div>
+      <div class="nav-item admin-only" onclick="nav('salary')" id="nav-salary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Salary
+      </div>
+    </div>
+    <div class="drawer-user">
+      <div class="drawer-user-row">
+        <div class="drawer-avatar" id="drawerAvatar">A</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:#ddd;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="drawerName">Admin</div>
+          <div style="font-size:11px;color:#666" id="drawerRole">Administrator</div>
+        </div>
+        <div class="sync-dot" id="syncDot"></div>
+      </div>
+      <button class="btn btn-outline btn-sm btn-block" onclick="logout()" style="margin-top:10px;background:transparent;border-color:#333;color:#888">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div class="topbar">
+      <div class="topbar-menu" onclick="openDrawer()"><span></span><span></span><span></span></div>
+      <div class="topbar-title" id="topbarTitle">Dashboard</div>
+      <div class="topbar-user" id="topbarAvatar">A</div>
+    </div>
+
+    <!-- PAGES -->
+    <div class="main" id="mainScroll">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div><div class="page-title">Dashboard</div><div class="page-sub" id="dashDateLabel"></div></div>
+        </div>
+        <div class="stat-grid" id="dashStats"></div>
+        <div class="card">
+          <div class="section-header"><div class="section-label">Weekly Sales</div></div>
+          <div class="mini-chart" id="weekChart"></div>
+        </div>
+        <div class="card">
+          <div class="section-header"><div class="section-label">Low Stock</div></div>
+          <div id="lowStockItems"></div>
+        </div>
+        <div class="card">
+          <div class="section-header"><div class="section-label">Today's Transactions</div></div>
+          <div id="todayTxList"></div>
+        </div>
+      </div>
+
+      <!-- CASH COUNTER -->
+      <div class="page" id="page-cashcount">
+        <div class="page-header">
+          <div><div class="page-title">Cash Counter</div><div class="page-sub" id="cashDateLabel"></div></div>
+        </div>
+
+        <div class="cash-counter">
+          <h3>Enter Today's Collection</h3>
+          <div class="cash-input-row">
+            <div class="cash-icon online">💳</div>
+            <label>Online</label>
+            <input type="number" id="cashOnline" placeholder="0" inputmode="decimal" oninput="calcCash()">
+          </div>
+          <div class="cash-input-row">
+            <div class="cash-icon cash">💵</div>
+            <label>Cash</label>
+            <input type="number" id="cashCash" placeholder="0" inputmode="decimal" oninput="calcCash()">
+          </div>
+          <div style="margin-top:10px">
+            <button class="btn btn-primary btn-block" onclick="saveCashEntry()">Save Entry</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-label" style="margin-bottom:12px">Today's Summary</div>
+          <div style="display:flex;flex-direction:column;gap:8px" id="cashSummaryRows"></div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:600">Total Collected</span>
+            <span style="font-size:18px;font-weight:700;color:var(--accent)" id="cashTotalCollected">₹0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:600">Total Sales (System)</span>
+            <span style="font-size:18px;font-weight:700;color:var(--accent2)" id="cashTotalSales">₹0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:600">Total Expenditure</span>
+            <span style="font-size:18px;font-weight:700;color:var(--danger)" id="cashTotalExp">₹0</span>
+          </div>
+          <hr style="border:none;border-top:1px solid var(--border);margin:10px 0">
+          <div style="background:var(--bg);border-radius:12px;padding:14px">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:6px" id="cashBalanceLabel">Balance / Shortage</div>
+            <div style="font-size:28px;font-weight:800" id="cashBalanceVal">₹0</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px" id="cashBalanceNote"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-label" style="margin-bottom:12px">Cash Entry History</div>
+          <div id="cashHistoryList"></div>
+        </div>
+      </div>
+
+      <!-- EMPLOYEES -->
+      <div class="page" id="page-employees">
+        <div class="page-header">
+          <div><div class="page-title">Employees</div></div>
+          <button class="btn btn-primary btn-sm" onclick="openEmpModal()">+ Add</button>
+        </div>
+        <div id="empList"></div>
+      </div>
+
+      <!-- INVENTORY -->
+      <div class="page" id="page-inventory">
+        <div class="page-header">
+          <div><div class="page-title">Inventory</div></div>
+          <button class="btn btn-primary btn-sm admin-only-el" onclick="openStockModal()">+ Add</button>
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="renderStock('all',this)">All</div>
+          <div class="tab" onclick="renderStock('low',this)">Low Stock</div>
+          <div class="tab" onclick="renderStock('out',this)">Out of Stock</div>
+        </div>
+        <div class="search-wrap">
+          <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Search products..." oninput="filterStock(this.value)">
+        </div>
+        <div id="stockList"></div>
+      </div>
+
+      <!-- SALES -->
+      <div class="page" id="page-sales">
+        <div class="page-header">
+          <div><div class="page-title">Sales</div></div>
+          <button class="btn btn-primary btn-sm" onclick="openSaleModal()">+ Add</button>
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="renderSales('today',this)">Today</div>
+          <div class="tab" onclick="renderSales('week',this)">Week</div>
+          <div class="tab" onclick="renderSales('all',this)">All</div>
+        </div>
+        <div id="salesSummaryBar" class="card" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:12px;margin-bottom:14px"></div>
+        <div id="saleList"></div>
+      </div>
+
+      <!-- EXPENDITURE -->
+      <div class="page" id="page-expenditure">
+        <div class="page-header">
+          <div><div class="page-title">Expenditure</div></div>
+          <button class="btn btn-primary btn-sm" onclick="openExpModal()">+ Add</button>
+        </div>
+        <div class="tabs">
+          <div class="tab active" onclick="renderExp('today',this)">Today</div>
+          <div class="tab" onclick="renderExp('week',this)">Week</div>
+          <div class="tab" onclick="renderExp('all',this)">All</div>
+        </div>
+        <div id="expSummaryBar" class="card" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;margin-bottom:14px"></div>
+        <div id="expList"></div>
+      </div>
+
+      <!-- ATTENDANCE -->
+      <div class="page" id="page-attendance">
+        <div class="page-header">
+          <div><div class="page-title">Attendance</div></div>
+          <button class="btn btn-primary btn-sm" onclick="openAttModal()">Mark</button>
+        </div>
+        <div id="attList"></div>
+      </div>
+
+      <!-- SALARY -->
+      <div class="page" id="page-salary">
+        <div class="page-header">
+          <div><div class="page-title">Salary</div></div>
+          <button class="btn btn-primary btn-sm" onclick="openSalaryModal()">Pay</button>
+        </div>
+        <div id="salaryList"></div>
+      </div>
+
+    </div><!-- end main -->
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" id="fab" onclick="handleFab()">+</button>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="empModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="empModalTitle">Add Employee</h3>
+    <input type="hidden" id="empEditId">
+    <div class="form-row">
+      <div class="form-group"><label>Full Name</label><input id="empName" placeholder="e.g. Raj Kumar"></div>
+      <div class="form-group"><label>Username</label><input id="empUser" placeholder="login username"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Password</label><input id="empPass" type="password"></div>
+      <div class="form-group"><label>Role</label>
+        <select id="empRole"><option>Sales Staff</option><option>Stock Manager</option><option>Cashier</option><option>Helper</option><option>Manager</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Phone</label><input id="empPhone" type="tel" inputmode="numeric"></div>
+      <div class="form-group"><label>Salary (₹/month)</label><input id="empSalary" type="number" inputmode="decimal"></div>
+    </div>
+    <div class="form-group"><label>Join Date</label><input id="empJoin" type="date"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('empModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stockModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="stockModalTitle">Add Product</h3>
+    <input type="hidden" id="stockEditId">
+    <div class="form-row">
+      <div class="form-group"><label>Product Name</label><input id="stockName" placeholder="e.g. Gold Pen"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="stockCat"><option>Stationery</option><option>Grocery</option><option>Electronics</option><option>Clothing</option><option>Beverages</option><option>Snacks</option><option>Cleaning</option><option>Other</option></select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Opening Stock</label><input id="stockOpen" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="form-group"><label>Added / Received</label><input id="stockAdd" type="number" inputmode="decimal" placeholder="0"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Unit Price (₹)</label><input id="stockPrice" type="number" inputmode="decimal" placeholder="0"></div>
+      <div class="form-group"><label>Low Stock Alert</label><input id="stockAlert" type="number" inputmode="decimal" placeholder="10"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('stockModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveStock()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="saleModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Add Sale</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Date</label><input id="saleDate" type="date"></div>
+      <div class="form-group"><label>Product</label><select id="saleProd" onchange="fillSaleRate()"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Quantity</label><input id="saleQty" type="number" inputmode="decimal" placeholder="0" oninput="calcSaleAmt()"></div>
+      <div class="form-group"><label>Rate (₹)</label><input id="saleRate" type="number" inputmode="decimal" placeholder="0" oninput="calcSaleAmt()"></div>
+    </div>
+    <div class="form-group"><label>Payment Type</label>
+      <select id="salePayType"><option value="cash">Cash</option><option value="online">Online / UPI</option><option value="card">Card</option></select>
+    </div>
+    <div class="form-group"><label>Total Amount (₹)</label><input id="saleAmt" readonly style="background:#f8f8f8;font-weight:700;font-size:18px"></div>
+    <div class="form-group"><label>Note (optional)</label><input id="saleNote" placeholder="Customer name, remarks..."></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('saleModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSale()">Save Sale</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="expModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Add Expenditure</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Date</label><input id="expDate" type="date"></div>
+      <div class="form-group"><label>Category</label>
+        <select id="expCat">
+          <option>Canteen</option><option>Finance/Loan</option><option>Salary</option><option>Rent</option>
+          <option>Electricity</option><option>Transport</option><option>Maintenance</option>
+          <option>Police/Legal</option><option>Stock Purchase</option><option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Description</label><input id="expDesc" placeholder="e.g. Monthly rent payment"></div>
+    <div class="form-group"><label>Amount (₹)</label><input id="expAmt" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="form-group"><label>Paid Via</label>
+      <select id="expPayType"><option value="cash">Cash</option><option value="online">Online / UPI</option><option value="card">Card</option></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('expModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveExp()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="attModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Mark Attendance</h3>
+    <div class="form-group"><label>Date</label><input id="attDate" type="date"></div>
+    <div id="attMarkList" style="margin-top:4px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('attModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAtt()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="salaryModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Pay Salary</h3>
+    <div class="form-row">
+      <div class="form-group"><label>Month</label><input id="salMonth" type="month"></div>
+      <div class="form-group"><label>Employee</label><select id="salEmpSel" onchange="updateSalModal()"></select></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Base Salary (₹)</label><input id="salBase" readonly style="background:#f8f8f8"></div>
+      <div class="form-group"><label>Present Days</label><input id="salDays" readonly style="background:#f8f8f8"></div>
+    </div>
+    <div class="form-group"><label>Deduction (₹)</label><input id="salDed" type="number" inputmode="decimal" placeholder="0" oninput="calcSalNet()"></div>
+    <div class="form-group"><label>Net Salary (₹)</label><input id="salNet" readonly style="background:#f5f4f0;font-weight:700;font-size:18px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('salaryModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSalary()">Mark Paid</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addStockModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Add Stock: <span id="addStockProdName"></span></h3>
+    <input type="hidden" id="addStockProdKey">
+    <div class="form-group"><label>Quantity to Add</label><input id="addStockQty" type="number" inputmode="decimal" placeholder="0"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('addStockModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="doAddStock()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getDatabase, ref, set, push, onValue, update, remove, get } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+
+// ── FIREBASE CONFIG (user must replace with their own) ──
+const firebaseConfig = {
+  apiKey: "AIzaSyAbbDO6T0Kt3VNXfn1ez_QfzTyg2ZTaCgg",
+  authDomain: "shop-erp-5ac1b.firebaseapp.com",
+  databaseURL: "https://shop-erp-5ac1b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "shop-erp-5ac1b",
+  storageBucket: "shop-erp-5ac1b.firebasestorage.app",
+  messagingSenderId: "389669992413",
+  appId: "1:389669992413:web:c82d81ed46968673526834"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+window._db = db;
+window._ref = ref;
+window._set = set;
+window._push = push;
+window._onValue = onValue;
+window._update = update;
+window._remove = remove;
+window._get = get;
+
+// Online/offline detection
+window.addEventListener('online', () => { document.getElementById('syncDot').classList.remove('offline'); showToast('Back online ✓'); });
+window.addEventListener('offline', () => { document.getElementById('syncDot').classList.add('offline'); showToast('Offline - changes may not sync'); });
+
+// Cache for realtime data
+window._cache = { employees:[], products:[], sales:[], expenditure:[], attendance:[], salaries:[], cashEntries:[] };
+
+function listenAll() {
+  const keys = ['employees','products','sales','expenditure','attendance','salaries','cashEntries'];
+  keys.forEach(k => {
+    onValue(ref(db, k), snap => {
+      const val = snap.val();
+      window._cache[k] = val ? Object.entries(val).map(([key, v]) => ({...v, _key: key})) : [];
+      refreshCurrentPage();
+    });
+  });
+}
+
+window._listenAll = listenAll;
+window._saveToDb = (path, data) => set(ref(db, path), data);
+window._pushToDb = (path, data) => push(ref(db, path), data);
+window._updateDb = (path, data) => update(ref(db, path), data);
+window._removeDb = (path) => remove(ref(db, path));
+
+// After DOM ready, kick off
+setTimeout(() => {
+  document.getElementById('loadScreen').style.display = 'none';
+  document.getElementById('loginPage').style.display = 'flex';
+}, 800);
+</script>
+
+<script>
+// ── HELPERS ──
+const today = new Date().toISOString().split('T')[0];
+const now = new Date();
+let currentUser = null;
+let currentRole = 'admin';
+let loginRole = 'admin';
+let currentPage = 'dashboard';
+let attState = {};
+
+function fmt(n){ return '₹' + Math.round(n||0).toLocaleString('en-IN'); }
+function showToast(msg, dur=2500){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function openDrawer(){ document.getElementById('drawer').classList.add('open'); document.getElementById('drawerOverlay').classList.add('open'); }
+function closeDrawer(){ document.getElementById('drawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open'); }
+
+function setLoginRole(r){
+  loginRole=r;
+  document.getElementById('roleAdminBtn').classList.toggle('active',r==='admin');
+  document.getElementById('roleEmpBtn').classList.toggle('active',r==='employee');
+}
+
+function doLogin(){
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value.trim();
+  const emps = window._cache.employees;
+  const found = emps.find(e => e.username===u && e.password===p);
+  if(!found){ document.getElementById('loginErr').style.display='block'; return; }
+  document.getElementById('loginErr').style.display='none';
+  currentUser = found;
+  currentRole = found.isAdmin ? 'admin' : 'employee';
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('app').classList.add('shown');
+  document.getElementById('drawerName').textContent = found.name;
+  document.getElementById('drawerRole').textContent = found.role;
+  document.getElementById('drawerAvatar').textContent = found.name[0];
+  document.getElementById('topbarAvatar').textContent = found.name[0];
+  const dateStr = now.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('drawerDate').textContent = dateStr;
+  document.getElementById('dashDateLabel').textContent = 'Today: '+dateStr;
+  document.getElementById('cashDateLabel').textContent = dateStr;
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentRole==='admin'?'':'none');
+  document.querySelectorAll('.admin-only-el').forEach(el=>el.style.display=currentRole==='admin'?'':'none');
+  nav('dashboard');
+  window._listenAll();
+}
+
+function logout(){
+  document.getElementById('app').classList.remove('shown');
+  document.getElementById('loginPage').style.display='flex';
+  closeDrawer();
+  currentUser=null;
+}
+
+function nav(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const pg=document.getElementById('page-'+p);
+  const ni=document.getElementById('nav-'+p);
+  if(pg) pg.classList.add('active');
+  if(ni) ni.classList.add('active');
+  currentPage=p;
+  const titles={dashboard:'Dashboard',cashcount:'Cash Counter',employees:'Employees',inventory:'Inventory',sales:'Sales',expenditure:'Expenditure',attendance:'Attendance',salary:'Salary'};
+  document.getElementById('topbarTitle').textContent=titles[p]||p;
+  document.getElementById('mainScroll').scrollTop=0;
+  closeDrawer();
+  refreshCurrentPage();
+  const showFab=['sales','expenditure','inventory'].includes(p);
+  document.getElementById('fab').classList.toggle('show',showFab);
+}
+
+function handleFab(){
+  if(currentPage==='sales') openSaleModal();
+  else if(currentPage==='expenditure') openExpModal();
+  else if(currentPage==='inventory') openStockModal();
+}
+
+function refreshCurrentPage(){
+  if(currentPage==='dashboard') renderDash();
+  else if(currentPage==='cashcount') renderCash();
+  else if(currentPage==='employees') renderEmps();
+  else if(currentPage==='inventory') renderStock();
+  else if(currentPage==='sales') renderSales();
+  else if(currentPage==='expenditure') renderExp();
+  else if(currentPage==='attendance') renderAtt();
+  else if(currentPage==='salary') renderSalary();
+}
+
+// ── SEED DEFAULT DATA ──
+function seedIfEmpty(){
+  const db=window._db;
+  window._get(window._ref(db,'employees')).then(snap=>{
+    if(!snap.exists()){
+      const emps=[
+        {id:'admin',name:'Admin User',username:'admin',password:'admin123',role:'Manager',phone:'9999999999',salary:15000,joinDate:'2024-01-01',status:'Active',isAdmin:true},
+        {id:'emp1',name:'Ravi Kumar',username:'emp1',password:'emp123',role:'Sales Staff',phone:'9876543210',salary:8000,joinDate:'2024-03-01',status:'Active',isAdmin:false},
+        {id:'emp2',name:'Priya S',username:'emp2',password:'emp456',role:'Cashier',phone:'9123456789',salary:9000,joinDate:'2024-02-15',status:'Active',isAdmin:false}
+      ];
+      emps.forEach(e=>window._pushToDb('employees',e));
+    }
+  });
+  window._get(window._ref(db,'products')).then(snap=>{
+    if(!snap.exists()){
+      const prods=[
+        {name:'Gold Pen',category:'Stationery',opening:139,added:0,sold:203,price:25,alert:20},
+        {name:'Mini Pen',category:'Stationery',opening:64,added:501,sold:156,price:10,alert:20},
+        {name:'Scissor',category:'Stationery',opening:0,added:0,sold:15,price:25,alert:5},
+        {name:'Newsprint',category:'Other',opening:64,added:20,sold:2,price:20,alert:10},
+        {name:'Connect',category:'Stationery',opening:34,added:0,sold:26,price:20,alert:10},
+        {name:'Finetuch',category:'Stationery',opening:94,added:0,sold:0,price:15,alert:10},
+        {name:'Advance',category:'Stationery',opening:117,added:0,sold:0,price:25,alert:10},
+        {name:'Switch',category:'Other',opening:43,added:0,sold:2,price:25,alert:10},
+        {name:'Red',category:'Stationery',opening:55,added:0,sold:0,price:25,alert:10},
+        {name:'Mint Gold',category:'Stationery',opening:33,added:0,sold:0,price:25,alert:10},
+        {name:'Hint',category:'Stationery',opening:125,added:60,sold:62,price:12,alert:20},
+        {name:'Total Pen',category:'Stationery',opening:181,added:0,sold:7,price:10,alert:15},
+        {name:'Kings',category:'Other',opening:84,added:70,sold:80,price:25,alert:15},
+        {name:'Rights',category:'Other',opening:98,added:30,sold:48,price:25,alert:15},
+        {name:'Steller',category:'Stationery',opening:132,added:60,sold:0,price:10,alert:20},
+        {name:'Crush',category:'Other',opening:36,added:0,sold:0,price:10,alert:10},
+        {name:'American',category:'Other',opening:58,added:0,sold:7,price:20,alert:10},
+        {name:'Compact',category:'Stationery',opening:17,added:0,sold:4,price:25,alert:10},
+        {name:'Classic',category:'Stationery',opening:29,added:0,sold:7,price:25,alert:10},
+        {name:'Informix',category:'Other',opening:27,added:0,sold:8,price:25,alert:10}
+      ];
+      prods.forEach(p=>window._pushToDb('products',p));
+    }
+  });
+}
+
+// ── DASHBOARD ──
+function renderDash(){
+  const sales=window._cache.sales||[];
+  const exps=window._cache.expenditure||[];
+  const prods=window._cache.products||[];
+  const todaySales=sales.filter(s=>s.date===today);
+  const todayExp=exps.filter(e=>e.date===today);
+  const totalS=todaySales.reduce((a,b)=>a+(b.amount||0),0);
+  const totalE=todayExp.reduce((a,b)=>a+(b.amount||0),0);
+  const lowStock=prods.filter(p=>(p.opening+p.added-p.sold)<=p.alert);
+  document.getElementById('dashStats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">Today Sales</div><div class="stat-value green">${fmt(totalS)}</div></div>
+    <div class="stat-card"><div class="stat-label">Today Expense</div><div class="stat-value red">${fmt(totalE)}</div></div>
+    <div class="stat-card"><div class="stat-label">Net Today</div><div class="stat-value blue">${fmt(totalS-totalE)}</div></div>
+    <div class="stat-card"><div class="stat-label">Low Stock</div><div class="stat-value amber">${lowStock.length} items</div></div>
+  `;
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  let maxS=1; const weekData=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(now); d.setDate(d.getDate()-i);
+    const ds=d.toISOString().split('T')[0];
+    const s=sales.filter(x=>x.date===ds).reduce((a,b)=>a+(b.amount||0),0);
+    weekData.push({label:days[d.getDay()],val:s});
+    if(s>maxS)maxS=s;
+  }
+  document.getElementById('weekChart').innerHTML=weekData.map(w=>`<div class="mini-bar-wrap"><div class="mini-bar" style="height:${Math.max(3,Math.round((w.val/maxS)*64))}px"></div><div class="mini-bar-label">${w.label}</div></div>`).join('');
+  document.getElementById('lowStockItems').innerHTML=lowStock.length?lowStock.slice(0,6).map(p=>{const s=p.opening+p.added-p.sold;return`<div class="low-stock-item"><span style="font-size:13px">${p.name}</span><span class="badge ${s<=0?'badge-red':'badge-amber'}">${s<=0?'Out':s+' left'}</span></div>`}).join(''):'<div class="empty-state"><p>All stock levels OK ✓</p></div>';
+  const all=[...todaySales.map(s=>({t:s.time||'',type:'Sale',desc:s.prodName+' ×'+s.qty,amt:'+'+fmt(s.amount),by:s.empName,pay:s.payType})),...todayExp.map(e=>({t:e.time||'',type:'Exp',desc:e.category,amt:'-'+fmt(e.amount),by:e.empName,pay:e.payType}))];
+  document.getElementById('todayTxList').innerHTML=all.length?all.map(t=>`<div class="low-stock-item"><div><div style="font-size:13px;font-weight:500">${t.desc}</div><div style="font-size:11px;color:var(--muted)">${t.by} · ${t.pay||''}</div></div><div style="text-align:right"><div style="font-weight:700;color:${t.type==='Sale'?'var(--accent)':'var(--danger)'}">${t.amt}</div><span class="badge ${t.type==='Sale'?'badge-green':'badge-red'}" style="font-size:10px">${t.type}</span></div></div>`).join(''):'<div class="empty-state"><p>No transactions today</p></div>';
+}
+
+// ── CASH COUNTER ──
+function calcCash(){
+  const online=parseFloat(document.getElementById('cashOnline').value)||0;
+  const cash=parseFloat(document.getElementById('cashCash').value)||0;
+  return online+cash;
+}
+
+function saveCashEntry(){
+  const online=parseFloat(document.getElementById('cashOnline').value)||0;
+  const cash=parseFloat(document.getElementById('cashCash').value)||0;
+  if(!online&&!cash){showToast('Enter at least one amount');return;}
+  window._pushToDb('cashEntries',{date:today,online,cash,total:online+cash,empId:currentUser.id||currentUser._key,empName:currentUser.name,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})});
+  document.getElementById('cashOnline').value='';
+  document.getElementById('cashCash').value='';
+  showToast('Cash entry saved ✓');
+}
+
+function renderCash(){
+  const entries=(window._cache.cashEntries||[]).filter(e=>e.date===today);
+  const sales=(window._cache.sales||[]).filter(s=>s.date===today);
+  const exps=(window._cache.expenditure||[]).filter(e=>e.date===today);
+  const totalCollectedOnline=entries.reduce((a,b)=>a+(b.online||0),0);
+  const totalCollectedCash=entries.reduce((a,b)=>a+(b.cash||0),0);
+  const totalCollected=totalCollectedOnline+totalCollectedCash;
+  const totalSales=sales.reduce((a,b)=>a+(b.amount||0),0);
+  const totalExp=exps.reduce((a,b)=>a+(b.amount||0),0);
+  const net=totalSales-totalExp;
+  const balance=totalCollected-net;
+  const rows=[
+    {label:'Online Collected',val:fmt(totalCollectedOnline),color:'var(--accent2)'},
+    {label:'Cash Collected',val:fmt(totalCollectedCash),color:'var(--accent)'},
+  ];
+  document.getElementById('cashSummaryRows').innerHTML=rows.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;color:var(--muted)">${r.label}</span><span style="font-size:16px;font-weight:700;color:${r.color}">${r.val}</span></div>`).join('');
+  document.getElementById('cashTotalCollected').textContent=fmt(totalCollected);
+  document.getElementById('cashTotalSales').textContent=fmt(totalSales);
+  document.getElementById('cashTotalExp').textContent=fmt(totalExp);
+  const balEl=document.getElementById('cashBalanceVal');
+  const noteEl=document.getElementById('cashBalanceNote');
+  const labelEl=document.getElementById('cashBalanceLabel');
+  if(balance>0){balEl.style.color='var(--accent)';labelEl.textContent='Surplus';noteEl.textContent='Collection is more than expected';}
+  else if(balance<0){balEl.style.color='var(--danger)';labelEl.textContent='Shortage ⚠';noteEl.textContent='Collection is less than expected';}
+  else{balEl.style.color='var(--muted)';labelEl.textContent='Balanced ✓';noteEl.textContent='Collection matches sales';}
+  balEl.textContent=(balance>=0?'+':'')+fmt(Math.abs(balance));
+  const allEntries=(window._cache.cashEntries||[]).sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('cashHistoryList').innerHTML=allEntries.length?allEntries.slice(0,20).map(e=>`<div class="low-stock-item"><div><div style="font-size:13px;font-weight:500">${e.date} · ${e.empName}</div><div style="font-size:11px;color:var(--muted)">Cash: ${fmt(e.cash)} · Online: ${fmt(e.online)} · ${e.time}</div></div><div style="font-weight:700;color:var(--accent)">${fmt(e.total)}</div></div>`).join(''):'<div class="empty-state"><p>No entries yet</p></div>';
+}
+
+// ── EMPLOYEES ──
+function openEmpModal(emp=null){
+  document.getElementById('empModalTitle').textContent=emp?'Edit Employee':'Add Employee';
+  document.getElementById('empEditId').value=emp?emp._key:'';
+  document.getElementById('empName').value=emp?emp.name:'';
+  document.getElementById('empUser').value=emp?emp.username:'';
+  document.getElementById('empPass').value=emp?emp.password:'';
+  document.getElementById('empRole').value=emp?emp.role:'Sales Staff';
+  document.getElementById('empPhone').value=emp?emp.phone:'';
+  document.getElementById('empSalary').value=emp?emp.salary:'';
+  document.getElementById('empJoin').value=emp?emp.joinDate:today;
+  document.getElementById('empModal').classList.add('open');
+}
+function saveEmp(){
+  const key=document.getElementById('empEditId').value;
+  const data={name:document.getElementById('empName').value,username:document.getElementById('empUser').value,password:document.getElementById('empPass').value,role:document.getElementById('empRole').value,phone:document.getElementById('empPhone').value,salary:parseFloat(document.getElementById('empSalary').value)||0,joinDate:document.getElementById('empJoin').value,status:'Active',isAdmin:false};
+  if(!data.name||!data.username){showToast('Name and username required');return;}
+  if(key) window._updateDb(`employees/${key}`,data);
+  else window._pushToDb('employees',data);
+  closeModal('empModal'); showToast('Employee saved ✓');
+}
+function deleteEmp(key){
+  if(!confirm('Delete this employee?'))return;
+  window._removeDb(`employees/${key}`); showToast('Deleted');
+}
+function renderEmps(){
+  const emps=window._cache.employees||[];
+  document.getElementById('empList').innerHTML=emps.length?emps.map(e=>`<div class="item-card">
+    <div class="item-card-header"><div class="item-card-title">${e.name}</div><span class="badge badge-blue">${e.role}</span></div>
+    <div class="item-card-body">
+      <div class="item-card-field"><span>Phone</span>${e.phone||'—'}</div>
+      <div class="item-card-field"><span>Salary</span>${fmt(e.salary)}/mo</div>
+      <div class="item-card-field"><span>Username</span>${e.username}</div>
+      <div class="item-card-field"><span>Joined</span>${e.joinDate}</div>
+    </div>
+    ${currentRole==='admin'&&!e.isAdmin?`<div class="item-card-actions"><button class="btn btn-outline btn-sm" onclick='openEmpModal(${JSON.stringify(e)})'>Edit</button><button class="btn btn-sm" style="background:#fcebeb;color:#a32d2d;border:none" onclick="deleteEmp('${e._key}')">Delete</button></div>`:''}
+  </div>`).join(''):'<div class="empty-state"><div class="empty-state-icon">👤</div><p>No employees yet</p></div>';
+}
+
+// ── INVENTORY ──
+let stockFilter='all';
+function openStockModal(prod=null){
+  document.getElementById('stockModalTitle').textContent=prod?'Edit Product':'Add Product';
+  document.getElementById('stockEditId').value=prod?prod._key:'';
+  document.getElementById('stockName').value=prod?prod.name:'';
+  document.getElementById('stockCat').value=prod?prod.category:'Stationery';
+  document.getElementById('stockOpen').value=prod?prod.opening:'';
+  document.getElementById('stockAdd').value=prod?prod.added:'';
+  document.getElementById('stockPrice').value=prod?prod.price:'';
+  document.getElementById('stockAlert').value=prod?prod.alert:'10';
+  document.getElementById('stockModal').classList.add('open');
+}
+function saveStock(){
+  const key=document.getElementById('stockEditId').value;
+  const data={name:document.getElementById('stockName').value,category:document.getElementById('stockCat').value,opening:parseInt(document.getElementById('stockOpen').value)||0,added:parseInt(document.getElementById('stockAdd').value)||0,sold:0,price:parseFloat(document.getElementById('stockPrice').value)||0,alert:parseInt(document.getElementById('stockAlert').value)||10};
+  if(!data.name){showToast('Product name required');return;}
+  if(key){window._updateDb(`products/${key}`,{...data,sold:((window._cache.products||[]).find(p=>p._key===key)||{}).sold||0});}
+  else window._pushToDb('products',data);
+  closeModal('stockModal'); showToast('Product saved ✓');
+}
+function openAddStock(key,name){
+  document.getElementById('addStockProdKey').value=key;
+  document.getElementById('addStockProdName').textContent=name;
+  document.getElementById('addStockQty').value='';
+  document.getElementById('addStockModal').classList.add('open');
+}
+function doAddStock(){
+  const key=document.getElementById('addStockProdKey').value;
+  const qty=parseInt(document.getElementById('addStockQty').value)||0;
+  const prod=(window._cache.products||[]).find(p=>p._key===key);
+  if(!prod)return;
+  window._updateDb(`products/${key}`,{added:(prod.added||0)+qty});
+  closeModal('addStockModal'); showToast('Stock updated ✓');
+}
+function deleteStock(key){
+  if(!confirm('Delete this product?'))return;
+  window._removeDb(`products/${key}`); showToast('Deleted');
+}
+function filterStock(q){
+  document.querySelectorAll('.stock-item-card').forEach(el=>{
+    el.style.display=el.dataset.name.toLowerCase().includes(q.toLowerCase())?'':'none';
+  });
+}
+function renderStock(filter,tabEl){
+  if(filter) stockFilter=filter;
+  if(tabEl){ document.querySelectorAll('#page-inventory .tab').forEach(t=>t.classList.remove('active')); tabEl.classList.add('active'); }
+  let prods=window._cache.products||[];
+  if(stockFilter==='low') prods=prods.filter(p=>(p.opening+p.added-p.sold)>0&&(p.opening+p.added-p.sold)<=p.alert);
+  else if(stockFilter==='out') prods=prods.filter(p=>(p.opening+p.added-p.sold)<=0);
+  document.getElementById('stockList').innerHTML=prods.length?prods.map(p=>{
+    const stock=p.opening+p.added-p.sold;
+    const low=stock<=p.alert;
+    const out=stock<=0;
+    return `<div class="item-card stock-item-card" data-name="${p.name}">
+      <div class="item-card-header"><div class="item-card-title">${p.name}</div><span class="badge ${out?'badge-red':low?'badge-amber':'badge-green'}">${out?'Out of Stock':low?stock+' Low':stock+' in stock'}</span></div>
+      <div class="item-card-body">
+        <div class="item-card-field"><span>Category</span>${p.category}</div>
+        <div class="item-card-field"><span>Unit Price</span>${fmt(p.price)}</div>
+        <div class="item-card-field"><span>Opening</span>${p.opening}</div>
+        <div class="item-card-field"><span>Added</span>${p.added}</div>
+        <div class="item-card-field"><span>Sold</span>${p.sold}</div>
+        <div class="item-card-field"><span>Alert at</span>${p.alert}</div>
+      </div>
+      <div class="item-card-actions">
+        <button class="btn btn-primary btn-sm" onclick="openAddStock('${p._key}','${p.name}')">+ Stock</button>
+        ${currentRole==='admin'?`<button class="btn btn-outline btn-sm" onclick='openStockModal(${JSON.stringify(p)})'>Edit</button><button class="btn btn-sm" style="background:#fcebeb;color:#a32d2d;border:none" onclick="deleteStock('${p._key}')">Del</button>`:''}
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty-state"><div class="empty-state-icon">📦</div><p>No products found</p></div>';
+}
+
+// ── SALES ──
+let salesPeriod='today';
+function openSaleModal(){
+  document.getElementById('saleDate').value=today;
+  const prods=window._cache.products||[];
+  document.getElementById('saleProd').innerHTML=prods.map(p=>`<option value="${p._key}">${p.name}</option>`).join('');
+  fillSaleRate();
+  document.getElementById('saleQty').value='';
+  document.getElementById('saleNote').value='';
+  document.getElementById('saleModal').classList.add('open');
+}
+function fillSaleRate(){
+  const key=document.getElementById('saleProd').value;
+  const prod=(window._cache.products||[]).find(p=>p._key===key);
+  if(prod){ document.getElementById('saleRate').value=prod.price; calcSaleAmt(); }
+}
+function calcSaleAmt(){
+  const q=parseFloat(document.getElementById('saleQty').value)||0;
+  const r=parseFloat(document.getElementById('saleRate').value)||0;
+  document.getElementById('saleAmt').value=(q*r).toFixed(2);
+}
+function saveSale(){
+  const key=document.getElementById('saleProd').value;
+  const qty=parseInt(document.getElementById('saleQty').value)||0;
+  if(!qty){showToast('Enter quantity');return;}
+  const prod=(window._cache.products||[]).find(p=>p._key===key);
+  if(!prod){showToast('Select a product');return;}
+  const avail=prod.opening+prod.added-prod.sold;
+  if(qty>avail){showToast('Insufficient stock! Available: '+avail);return;}
+  window._updateDb(`products/${key}`,{sold:(prod.sold||0)+qty});
+  const amt=parseFloat(document.getElementById('saleAmt').value)||0;
+  window._pushToDb('sales',{date:document.getElementById('saleDate').value,prodKey:key,prodName:prod.name,qty,rate:parseFloat(document.getElementById('saleRate').value),amount:amt,payType:document.getElementById('salePayType').value,empId:currentUser._key||currentUser.id,empName:currentUser.name,note:document.getElementById('saleNote').value,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})});
+  closeModal('saleModal'); showToast('Sale saved ✓');
+}
+function renderSales(period,tabEl){
+  if(period) salesPeriod=period;
+  if(tabEl){ document.querySelectorAll('#page-sales .tab').forEach(t=>t.classList.remove('active')); tabEl.classList.add('active'); }
+  let sales=window._cache.sales||[];
+  if(currentRole==='employee') sales=sales.filter(s=>s.empId===currentUser._key||s.empId===currentUser.id);
+  if(salesPeriod==='today') sales=sales.filter(s=>s.date===today);
+  else if(salesPeriod==='week'){ const w=new Date(now);w.setDate(w.getDate()-7);sales=sales.filter(s=>new Date(s.date)>=w); }
+  const total=sales.reduce((a,b)=>a+(b.amount||0),0);
+  const cash=sales.filter(s=>s.payType==='cash').reduce((a,b)=>a+(b.amount||0),0);
+  const online=sales.filter(s=>s.payType!=='cash').reduce((a,b)=>a+(b.amount||0),0);
+  document.getElementById('salesSummaryBar').innerHTML=`
+    <div><div class="stat-label">Total</div><div style="font-size:18px;font-weight:700;color:var(--accent)">${fmt(total)}</div></div>
+    <div><div class="stat-label">Cash</div><div style="font-size:18px;font-weight:700">${fmt(cash)}</div></div>
+    <div><div class="stat-label">Online</div><div style="font-size:18px;font-weight:700;color:var(--accent2)">${fmt(online)}</div></div>
+  `;
+  document.getElementById('saleList').innerHTML=sales.length?sales.map(s=>`<div class="item-card">
+    <div class="item-card-header"><div class="item-card-title">${s.prodName}</div><span style="font-size:16px;font-weight:700;color:var(--accent)">${fmt(s.amount)}</span></div>
+    <div class="item-card-body">
+      <div class="item-card-field"><span>Qty × Rate</span>${s.qty} × ${fmt(s.rate)}</div>
+      <div class="item-card-field"><span>Payment</span><span class="badge ${s.payType==='cash'?'badge-green':s.payType==='online'?'badge-blue':'badge-gray'}">${s.payType}</span></div>
+      <div class="item-card-field"><span>Date</span>${s.date}</div>
+      <div class="item-card-field"><span>By</span>${s.empName}</div>
+      ${s.note?`<div class="item-card-field" style="grid-column:span 2"><span>Note</span>${s.note}</div>`:''}
+    </div>
+  </div>`).join(''):'<div class="empty-state"><div class="empty-state-icon">💰</div><p>No sales records</p></div>';
+}
+
+// ── EXPENDITURE ──
+let expPeriod='today';
+function openExpModal(){
+  document.getElementById('expDate').value=today;
+  document.getElementById('expDesc').value='';
+  document.getElementById('expAmt').value='';
+  document.getElementById('expModal').classList.add('open');
+}
+function saveExp(){
+  const amt=parseFloat(document.getElementById('expAmt').value)||0;
+  if(!amt){showToast('Enter amount');return;}
+  window._pushToDb('expenditure',{date:document.getElementById('expDate').value,category:document.getElementById('expCat').value,desc:document.getElementById('expDesc').value,amount:amt,payType:document.getElementById('expPayType').value,empId:currentUser._key||currentUser.id,empName:currentUser.name,time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})});
+  closeModal('expModal'); showToast('Expense saved ✓');
+}
+function renderExp(period,tabEl){
+  if(period) expPeriod=period;
+  if(tabEl){ document.querySelectorAll('#page-expenditure .tab').forEach(t=>t.classList.remove('active')); tabEl.classList.add('active'); }
+  let exps=window._cache.expenditure||[];
+  if(expPeriod==='today') exps=exps.filter(e=>e.date===today);
+  else if(expPeriod==='week'){ const w=new Date(now);w.setDate(w.getDate()-7);exps=exps.filter(e=>new Date(e.date)>=w); }
+  const total=exps.reduce((a,b)=>a+(b.amount||0),0);
+  const cash=exps.filter(e=>e.payType==='cash').reduce((a,b)=>a+(b.amount||0),0);
+  document.getElementById('expSummaryBar').innerHTML=`
+    <div><div class="stat-label">Total Expense</div><div style="font-size:20px;font-weight:700;color:var(--danger)">${fmt(total)}</div></div>
+    <div><div class="stat-label">Cash Paid</div><div style="font-size:20px;font-weight:700">${fmt(cash)}</div></div>
+  `;
+  document.getElementById('expList').innerHTML=exps.length?exps.map(e=>`<div class="item-card">
+    <div class="item-card-header"><div class="item-card-title">${e.desc||e.category}</div><span style="font-size:16px;font-weight:700;color:var(--danger)">${fmt(e.amount)}</span></div>
+    <div class="item-card-body">
+      <div class="item-card-field"><span>Category</span><span class="badge badge-amber">${e.category}</span></div>
+      <div class="item-card-field"><span>Paid via</span>${e.payType}</div>
+      <div class="item-card-field"><span>Date</span>${e.date}</div>
+      <div class="item-card-field"><span>By</span>${e.empName}</div>
+    </div>
+  </div>`).join(''):'<div class="empty-state"><div class="empty-state-icon">📋</div><p>No expense records</p></div>';
+}
+
+// ── ATTENDANCE ──
+function openAttModal(){
+  document.getElementById('attDate').value=today;
+  attState={};
+  const emps=(window._cache.employees||[]).filter(e=>!e.isAdmin);
+  const atts=window._cache.attendance||[];
+  document.getElementById('attMarkList').innerHTML=emps.map(e=>{
+    const rec=atts.find(a=>a.empId===e._key&&a.date===today);
+    if(rec) attState[e._key]=rec.status;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px;font-weight:500">${e.name}</span>
+      <div class="att-toggle">
+        <button class="${attState[e._key]==='present'?'present':''}" onclick="toggleAtt('${e._key}','present',this)">Present</button>
+        <button class="${attState[e._key]==='absent'?'absent':''}" onclick="toggleAtt('${e._key}','absent',this)">Absent</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('attModal').classList.add('open');
+}
+function toggleAtt(eid,status,btn){
+  attState[eid]=status;
+  const row=btn.closest('.att-toggle');
+  row.querySelectorAll('button').forEach(b=>{b.className=''});
+  btn.className=status;
+}
+function saveAtt(){
+  const date=document.getElementById('attDate').value;
+  const atts=window._cache.attendance||[];
+  Object.entries(attState).forEach(([eid,status])=>{
+    const rec=atts.find(a=>a.empId===eid&&a.date===date);
+    if(rec) window._updateDb(`attendance/${rec._key}`,{status});
+    else window._pushToDb('attendance',{empId:eid,date,status});
+  });
+  closeModal('attModal'); showToast('Attendance saved ✓'); renderAtt();
+}
+function renderAtt(){
+  const emps=(window._cache.employees||[]).filter(e=>!e.isAdmin);
+  const atts=window._cache.attendance||[];
+  const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('attList').innerHTML=emps.length?emps.map(e=>{
+    const moAtts=atts.filter(a=>a.empId===e._key&&a.date.startsWith(mo));
+    const present=moAtts.filter(a=>a.status==='present').length;
+    const absent=moAtts.filter(a=>a.status==='absent').length;
+    const td=atts.find(a=>a.empId===e._key&&a.date===today);
+    return `<div class="item-card">
+      <div class="item-card-header"><div class="item-card-title">${e.name}</div><span class="badge ${td?td.status==='present'?'badge-green':'badge-red':'badge-amber'}">${td?td.status:'Not Marked'}</span></div>
+      <div class="item-card-body">
+        <div class="item-card-field"><span>This Month Present</span>${present} days</div>
+        <div class="item-card-field"><span>Absent</span>${absent} days</div>
+        <div class="item-card-field"><span>Role</span>${e.role}</div>
+        <div class="item-card-field"><span>Salary</span>${fmt(e.salary)}</div>
+      </div>
+    </div>`;
+  }).join(''):'<div class="empty-state"><div class="empty-state-icon">📅</div><p>No employees</p></div>';
+}
+
+// ── SALARY ──
+function openSalaryModal(){
+  const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('salMonth').value=mo;
+  const emps=(window._cache.employees||[]).filter(e=>!e.isAdmin);
+  document.getElementById('salEmpSel').innerHTML=emps.map(e=>`<option value="${e._key}">${e.name}</option>`).join('');
+  document.getElementById('salDed').value='';
+  updateSalModal();
+  document.getElementById('salaryModal').classList.add('open');
+}
+function updateSalModal(){
+  const key=document.getElementById('salEmpSel').value;
+  const mo=document.getElementById('salMonth').value;
+  const emp=(window._cache.employees||[]).find(e=>e._key===key);
+  if(!emp)return;
+  document.getElementById('salBase').value=emp.salary;
+  const days=(window._cache.attendance||[]).filter(a=>a.empId===key&&a.date.startsWith(mo)&&a.status==='present').length;
+  document.getElementById('salDays').value=days;
+  calcSalNet();
+}
+function calcSalNet(){
+  const base=parseFloat(document.getElementById('salBase').value)||0;
+  const ded=parseFloat(document.getElementById('salDed').value)||0;
+  document.getElementById('salNet').value=(base-ded).toFixed(0);
+}
+function saveSalary(){
+  const key=document.getElementById('salEmpSel').value;
+  const mo=document.getElementById('salMonth').value;
+  const emp=(window._cache.employees||[]).find(e=>e._key===key);
+  const data={empId:key,empName:emp?.name,month:mo,base:parseFloat(document.getElementById('salBase').value)||0,days:parseInt(document.getElementById('salDays').value)||0,deduction:parseFloat(document.getElementById('salDed').value)||0,net:parseFloat(document.getElementById('salNet').value)||0,paid:true,paidOn:today};
+  const existing=(window._cache.salaries||[]).find(s=>s.empId===key&&s.month===mo);
+  if(existing) window._updateDb(`salaries/${existing._key}`,data);
+  else window._pushToDb('salaries',data);
+  closeModal('salaryModal'); showToast('Salary marked as paid ✓');
+}
+function renderSalary(){
+  const emps=(window._cache.employees||[]).filter(e=>!e.isAdmin);
+  const mo=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  document.getElementById('salaryList').innerHTML=emps.length?emps.map(e=>{
+    const days=(window._cache.attendance||[]).filter(a=>a.empId===e._key&&a.date.startsWith(mo)&&a.status==='present').length;
+    const rec=(window._cache.salaries||[]).find(s=>s.empId===e._key&&s.month===mo);
+    return `<div class="item-card">
+      <div class="item-card-header"><div class="item-card-title">${e.name}</div><span class="badge ${rec?.paid?'badge-green':'badge-amber'}">${rec?.paid?'Paid':'Pending'}</span></div>
+      <div class="item-card-body">
+        <div class="item-card-field"><span>Base Salary</span>${fmt(e.salary)}</div>
+        <div class="item-card-field"><span>Present Days</span>${days}</div>
+        <div class="item-card-field"><span>Deduction</span>${fmt(rec?.deduction||0)}</div>
+        <div class="item-card-field"><span>Net Salary</span><strong>${fmt(rec?.net||e.salary)}</strong></div>
+        ${rec?.paidOn?`<div class="item-card-field"><span>Paid On</span>${rec.paidOn}</div>`:''}
+      </div>
+      ${currentRole==='admin'?`<div class="item-card-actions"><button class="btn btn-primary btn-sm" onclick="openSalaryModal()">Pay Salary</button></div>`:''}
+    </div>`;
+  }).join(''):'<div class="empty-state"><div class="empty-state-icon">💳</div><p>No employees</p></div>';
+}
+
+document.getElementById('salEmpSel').addEventListener('change', updateSalModal);
+document.getElementById('salMonth').addEventListener('change', updateSalModal);
+</script>
+</body>
+</html>
